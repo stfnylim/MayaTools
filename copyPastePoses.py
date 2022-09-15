@@ -29,7 +29,9 @@ _read_dir_ = os.path.join(_current_dir_,_data_dir_)
 
 # class for Part 1
 class SkeletonStorage():
-    def getAllRootJoints():
+    def __init__(self):
+        pass
+    def getAllRootJoints(self):
         jnts = mc.ls(type="joint", l=True)  # Collect all joints in scene by their long names.
         output = []
         for jnt in jnts:
@@ -39,7 +41,7 @@ class SkeletonStorage():
         return output
     
     # for getting the scale, rotate, translate, joint orient attributes of object
-    def getAttributes(object):
+    def getAttributes(self,object):
         attributes = ['scale','rotate','translate','jointOrient']
         attList = []
         for attribute in attributes:
@@ -51,29 +53,31 @@ class SkeletonStorage():
     
     # to store information of single joint heirarchy as a tree.
     # preserves index order of joints
-    def inputJointHierarchy(parent, tree):
+    def inputJointHierarchy(self,parent, tree):
         children = mc.listRelatives(parent, c=True, type='joint')
-        dict1 = {parent: [getAttributes(parent),[]]}
+        dict1 = {parent: [self.getAttributes(parent),[]]}
         tree.append(dict1)
         if children:
             for child in children:
-                inputJointHierarchy(child, tree[-1][parent][1]) 
+                self.inputJointHierarchy(child, tree[-1][parent][1]) 
         else:
             return
 
-    def getSceneSkeletons():
+    def getSceneSkeletons(self):
         allJointHier = []
-        allRootJoints = getAllRootJoints()
+        allRootJoints = self.getAllRootJoints()
         # iterates through all root joints to store attributes and child joint data
         for rootJoint in allRootJoints:
             hier_tree = []
-            inputJointHierarchy(rootJoint, hier_tree)
+            self.inputJointHierarchy(rootJoint, hier_tree)
             allJointHier.append(hier_tree)
         return allJointHier
 # class for part 2       
 class SkeletonsLoad():
+    def __init__(self):
+        pass
     # TODO: compare new skeletons in scene with old
-    def compareSkeletons():
+    def compareSkeletons(self):
         # Use getAllRootJoints, and inputJointHierarchy to retrieve new scene data
         # or parseChildJoints after getAllRootJoints
         # Then compare names and structure.
@@ -82,7 +86,7 @@ class SkeletonsLoad():
     
     
     # TODO: unparent if needed, add new joints to structure, then parent.
-    def addJoints(parent_joint, new_child_joint):
+    def addJoints(self,parent_joint, new_child_joint):
         # retrieve parent joint, if it has children, unparent those children
         
         # create new child joint with transform info from param.
@@ -91,25 +95,25 @@ class SkeletonsLoad():
         Pass
     
     # parses through skeletons to update transforms
-    def parseChildJoints(joint_list, f):
+    def parseChildJoints(self, joint_list, f):
         for skeleton in joint_list:
             if type(skeleton) == list:
                 skeleton = skeleton[0]               
             prnt = next(iter(skeleton))
             
-            f(skeleton)
+            f(self,skeleton)
                  
             children = skeleton[prnt][-1]
             
             if len(children) == 0:
                 return
             #print(children)
-            parseChildJoints(children,f)
+            self.parseChildJoints(children,f)
             
     
-    def changeTransform(dst_transform):
+    def changeTransform(self, dst_transform):
         name = next(iter(dst_transform))
-        transform = getSourceTransform(name)  # source transform from json file
+        transform = self.getSourceTransform(name)  # source transform from json file
         # updating scale, rotate, translate, joint orient attributes 
         mc.setAttr(name+".scale", transform[0][0][0], transform[0][0][1], transform[0][0][2])
         mc.setAttr(name+".rotate", transform[1][0][0],transform[1][0][1],transform[1][0][2])
@@ -117,13 +121,13 @@ class SkeletonsLoad():
         mc.setAttr(name+".jointOrient", transform[3][0][0],transform[3][0][1],transform[3][0][2])
     
     
-    def getSourceTransform(name):
+    def getSourceTransform(self, name):
         f = open(_read_dir_)
         data = json.load(f)
-        return getTransformByName(data, name)
+        return self.getTransformByName(data, name)
         
         
-    def getTransformByName(transform, name): # would find more efficient way to search
+    def getTransformByName(self,transform, name): # would find more efficient way to search
         for skeleton in transform:
             # some data is stored in a list so retrieve data
             if type(skeleton) == list:
@@ -137,7 +141,7 @@ class SkeletonsLoad():
             if len(children) == 0:
                 continue
             else: # If children node returns none, then continue loop
-                child = getTransformByName(children, name)            
+                child = self.getTransformByName(children, name)            
                 if not child:
                     continue
                 else:
@@ -154,16 +158,17 @@ else:
     if os.path.exists(_write_dir_):
         os.remove(_write_dir_)
     with open(_write_dir_, 'w') as f:
-        json.dump(SkeletonStorage.getSceneSkeletons(), f)
+        json.dump(SkeletonStorage().getSceneSkeletons(), f)
     print('Successfully stored skeletons in json file')
 
 
 # ------------------- Update new scene with json file -------------------------- #
-allJointHier = SkeletonStorage.getSceneSkeletons()
+ss = SkeletonStorage()
+allJointHier = ss.getSceneSkeletons()
 if not os.path.exists(_read_dir_):
     print('The read file does not exist')
 else:
     # TODO: Must compare skeletons in current scene to add any missing bones
     # SkeletonsLoad.compareSkeletons()
-    SkeletonsLoad.parseChildJoints(allJointHier, SkeletonsLoad.changeTransform)
+    SkeletonsLoad().parseChildJoints(allJointHier, SkeletonsLoad.changeTransform)
     print('finished copying poses to current scene')
